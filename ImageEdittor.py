@@ -7,7 +7,7 @@ This class is only meant to edit the output image into a black and white
 circle that can be used to compare in the Spinboard class
 '''
 class ImageEdittor:
-    def __init__(self, image, output = "result.png"):
+    def __init__(self, image, output = "images/result.png"):
         self.name = output
         self.image = cv2.imread(image, cv2.IMREAD_UNCHANGED)
         self.height, self.width, _ = self.image.shape
@@ -62,7 +62,7 @@ class ImageEdittor:
         cv2.imwrite(self.name, self.image)
         return radius
 
-edit = ImageEdittor("cat.png")
+edit = ImageEdittor("images/cat.png")
 edit.addBackground()
 edit.blackAndWhite()
 edit.invert()
