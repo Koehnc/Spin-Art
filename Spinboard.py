@@ -38,11 +38,12 @@ class Spinboard:
                 x = b * math.cos(angle)  # Calculate x-coordinate
                 y = a * math.sin(angle)  # Calculate y-coordinate
                 self.addNail((int(x + b), int(y + a)))  # Offset by the center of the rectangle
+                self.numNails -= 1
             self.currentNail = self.nails[0]
         else:
             self.nails = []
             for i in range(0, len(nails)):
-                self.nails.append(Nail(self.width, self.height, nails[i][0], nails[i][1]))
+                self.addNail((nails[i][0], nails[i][1]))
             self.numNails = len(self.nails)
 
     def display(self):
@@ -62,6 +63,7 @@ class Spinboard:
                 newNail.addLine(nail)
         self.nails.append(newNail)
         self.currentNail = newNail
+        self.numNails += 1
         self.display()
 
     def getNumNails(self):

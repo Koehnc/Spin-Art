@@ -88,8 +88,9 @@ class ImageDisplayApp(QMainWindow):
         self.right_view.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
 
     def runSpinboard(self):
+        print(self.spinboard.getNumNails())
         if (self.spinboard.getNumNails() == 0):
-            self.spinboard = Spinboard(self.image, 100)
+            self.spinboard = Spinboard(self.image, 50)
             self.process = multiprocessing.Process(target=self.spinboard.drawLines, args=(100000,))
             self.process.start()
         else:
