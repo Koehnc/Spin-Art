@@ -62,9 +62,9 @@ class ImageEdittor:
         cv2.imwrite(self.name, self.image)
         return radius
 
-edit = ImageEdittor("images/cat.png")
-edit.addBackground()
+edit = ImageEdittor("images/CreepyWitch.png")
+# edit.addBackground()
 edit.blackAndWhite()
-edit.invert()
+# edit.invert()
 # edit.cropCircle(100, (180, 130))
-edit.cropCircle()
+# edit.cropCircle()

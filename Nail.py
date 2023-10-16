@@ -2,14 +2,14 @@ import numpy as np
 import cv2
 
 class Nail:
-    def __init__(self, size, x, y):
-        self.height = size
-        self.width = size
+    def __init__(self, width, height, x, y):
+        self.width = width
+        self.height = height
         self.x = x
         self.y = y
         self.lines = []
     
-    def addLine(self, toNail, color = (0, 0, 0, 100), thickness = 1):
+    def addLine(self, toNail, color = (0, 0, 0, 128), thickness = 1):
         x = toNail.x
         y = toNail.y
         lineImage = np.zeros((self.width, self.height, 4), dtype=np.uint8)

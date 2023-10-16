@@ -1,7 +1,8 @@
 import sys
+import multiprocessing
 from PyQt5.QtWidgets import QApplication, QMainWindow, QGraphicsView, QGraphicsScene, QGraphicsPixmapItem, QVBoxLayout, QWidget, QPushButton, QHBoxLayout, QFileDialog
 from PyQt5.QtGui import QPixmap, QPainter, QPen
-from PyQt5.QtCore import Qt, QPoint
+from PyQt5.QtCore import Qt, QPoint, QTimer, QObject
 
 from Spinboard import Spinboard
 
@@ -12,10 +13,12 @@ class ImageDisplayApp(QMainWindow):
         # Handle the drawing code
         self.image = "images/cat.png"
         self.spinboard = Spinboard(self.image, nails=[])
+        self.process = None
 
         # Set up the main window with the updated geometry
         self.setWindowTitle("Image Display App")
-        self.setGeometry(500, 300, 825, 500)  # Updated geometry
+        self.setGeometry(500, 300, 10, 10)  # Updated geometry
+        self.setMaximumSize(10,10)
 
         # Create a central widget
         self.central_widget = QWidget(self)
@@ -66,23 +69,41 @@ class ImageDisplayApp(QMainWindow):
         options_layout.addWidget(clear_button)
 
     def load_and_display_images(self):
-        # Load and display initial images as QPixmapItems in left and right scenes
-        left_image_item = QGraphicsPixmapItem()
-        left_image_item.setPixmap(QPixmap(self.image).scaledToWidth(400))
+        self.left_scene.clear()
+        left_image = QPixmap(self.image)
+        left_image_item = QGraphicsPixmapItem(left_image)
         self.left_scene.addItem(left_image_item)
-
-        right_image_item = QGraphicsPixmapItem()
-        right_image_item.setPixmap(QPixmap("Spinboard.png").scaledToWidth(400))
+        left_image_size = left_image.size()
+        self.left_view.setFixedSize(left_image_size)
+        self.left_view.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+        self.left_view.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+        
+        self.right_scene.clear()
+        right_image = QPixmap("Spinboard.png")
+        right_image_item = QGraphicsPixmapItem(right_image)
         self.right_scene.addItem(right_image_item)
+        right_image_size = right_image.size()
+        self.right_view.setFixedSize(right_image_size)
+        self.right_view.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+        self.right_view.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
 
     def runSpinboard(self):
         if (self.spinboard.getNumNails() == 0):
-            self.spinboard = Spinboard(self.image)
-            self.spinboard.drawLines(100000)
+            self.spinboard = Spinboard(self.image, 100)
+            self.process = multiprocessing.Process(target=self.spinboard.drawLines, args=(100000,))
+            self.process.start()
         else:
-            self.spinboard.drawLines(100000)
+            self.process = multiprocessing.Process(target=self.spinboard.drawLines, args=(100000,))
+            self.process.start()
+        
+        timer = QTimer(self)
+        timer.timeout.connect(self.load_and_display_images)
+        timer.start(100)
         
     def clear_right_image(self):
+        if self.process and self.process.is_alive():
+            self.process.terminate()
+
         # Clear the image in the right QGraphicsView
         self.right_scene.clear()
         self.spinboard = Spinboard(self.image, nails=[])
@@ -93,11 +114,9 @@ class ImageDisplayApp(QMainWindow):
         options = QFileDialog.Options()
         file_path, _ = QFileDialog.getOpenFileName(self, "Open Image File", "", "Image Files (*.png *.jpg *.jpeg *.bmp *.gif);;All Files (*)", options=options)
         if file_path:
-            left_image_item = QGraphicsPixmapItem()
-            left_image_item.setPixmap(QPixmap(file_path).scaledToWidth(400))
             self.image = file_path
-            self.left_scene.clear()  # Clear the existing scene
-            self.left_scene.addItem(left_image_item)
+            # self.spinboard = Spinboard(self.image, nails=self.spinboard.nails)
+            self.clear_right_image()
 
     def mousePressEvent(self, event):
         # Handle mouse clicks in the right QGraphicsView
@@ -113,9 +132,13 @@ class ImageDisplayApp(QMainWindow):
         self.spinboard.addNail(pos)
         self.load_and_display_images()
 
+    def closeEvent(self, event):
+        # Handle the window close event
+        if self.process and self.process.is_alive():
+            self.process.terminate()
+
 if __name__ == "__main__":
     app = QApplication(sys.argv)
     window = ImageDisplayApp()
     window.show()
     sys.exit(app.exec_())
-
