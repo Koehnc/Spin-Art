@@ -90,10 +90,10 @@ class ImageDisplayApp(QMainWindow):
     def runSpinboard(self):
         if (self.spinboard.getNumNails() == 0):
             self.spinboard = Spinboard(self.image, 100)
-            self.process = multiprocessing.Process(target=self.spinboard.drawLines, args=(100000,))
+            self.process = multiprocessing.Process(target=self.spinboard.drawLines, args=(3000,))
             self.process.start()
         else:
-            self.process = multiprocessing.Process(target=self.spinboard.drawLines, args=(100000,))
+            self.process = multiprocessing.Process(target=self.spinboard.drawLines, args=(3000,))
             self.process.start()
         
         timer = QTimer(self)

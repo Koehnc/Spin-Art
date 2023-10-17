@@ -66,7 +66,7 @@ class Spinboard:
         # Draw the nails and add the lines to each nail
         for nail in self.nails:
             # This only adds the line if the pixels are too close, which could fuck up none circle/ellipse
-            if math.sqrt((nail.x - newNail.x) ** 2 + (nail.y - newNail.y) ** 2) > 20:
+            if math.sqrt((nail.x - newNail.x) ** 2 + (nail.y - newNail.y) ** 2) > 0:
                 nail.addLine(newNail)
                 newNail.addLine(nail)
         self.nails.append(newNail)
@@ -87,10 +87,10 @@ class Spinboard:
         self.image = self.drawLine(bestLine[1])
         self.goalImage = self.subtractLine(bestLine[1])
         self.currentNail = bestLine[0]
-        return self.getDifferenceMeanAlpha(self.image)
+        return self.lineHeuristic(self.image)
 
     def getBestLine(self, line):
-        return self.getDifferenceMeanAlpha(line[1])
+        return self.lineHeuristic(line[1])
 
     def drawLine(self, line):
         image = self.image.copy().astype(float)
@@ -107,36 +107,20 @@ class Spinboard:
         result[:, :, 3] = new_alpha
         
         return result.astype(np.uint8)
-        
-    '''
-    Gets the difference/error from the given image to the goalImage that is a
-    class attribute
-    '''
-    def getDifferenceMeanChannels(self, image):
-        # Extract the RGB channels from the images
-        image_channels = image[:, :, :3]
-        goal_image_channels = self.goalImage[:, :, :3]
-
-        # Calculate the absolute difference for each channel
-        abs_diff = np.abs(image_channels - goal_image_channels)
-
-        # Calculate the mean of the masked absolute differences
-        mean_diff = np.mean(abs_diff)
-
-        return mean_diff
     
-    def getDifferenceMeanAlpha(self, line):
-        alpha = line[:, :, 3]
-        goalAlpha = self.goalImage[:, :, 3]
+    def lineHeuristic(self, line):
+        alpha = line[:, :, 3] / 255
+        goalAlpha = self.goalImage[:, :, 3] / 255
 
-        return np.sum(alpha * goalAlpha)
+        return np.sum(alpha * goalAlpha) / alpha.size**2
     
     def subtractLine(self, line):
         alpha1 = self.goalImage[:, :, 3] / 255.0
         alpha2 = line[:, :, 3] / 255.0
 
         # resulting_alpha = alpha1 + alpha2 - (alpha1 * alpha2)     # This is "addition"
-        resulting_alpha = abs(alpha1 - alpha2)
+        resulting_alpha = alpha1 - alpha2 * .7
+        resulting_alpha = np.maximum(resulting_alpha, 0)
 
         resulting_alpha *= 255
         resulting_alpha = resulting_alpha.astype(np.uint8)
