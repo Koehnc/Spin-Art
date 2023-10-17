@@ -16,6 +16,7 @@ class Spinboard:
         self.numNails = numNails
         self.currentNail = None
         self.image = np.ones((self.width, self.height, 4), dtype=np.uint8) * 255
+        self.lines = {}
         self.display()
 
         # Init the goal image
@@ -45,14 +46,28 @@ class Spinboard:
                 angle = 2 * math.pi * i / self.numNails
                 x = b * math.cos(angle)  # Calculate x-coordinate
                 y = a * math.sin(angle)  # Calculate y-coordinate
-                self.addNail((int(x + b), int(y + a)))  # Offset by the center of the rectangle
-                self.numNails -= 1
+                # self.addNail((int(x + b), int(y + a)))  # Offset by the center of the rectangle
+                self.nails.append((int(x + b), int(y + a)))
+                # self.numNails -= 1
             self.currentNail = self.nails[0]
         else:
             self.nails = []
             for i in range(0, len(nails)):
-                self.addNail((nails[i][0], nails[i][1]))
+                # self.addNail((nails[i][0], nails[i][1]))
+                self.nails.append((nails[i][0], nails[i][1]))
             self.numNails = len(self.nails)
+
+        color = (0, 0, 0, 64)
+        thickness = 1
+        whiteImage = np.zeros((self.width, self.height, 4), dtype=np.uint8)
+        for i in range(0, len(self.nails)):
+            for j in range(i + 1, len(self.nails)):
+                lineImage = cv2.line(whiteImage.copy(), (self.nails[i][0], self.nails[i][1]), (self.nails[j][0], self.nails[j][1]), color, thickness)
+                lineImage = cv2.GaussianBlur(lineImage, (3, 3), 0)
+                self.lines[((self.nails[i][0], self.nails[i][1]), (self.nails[j][0], self.nails[j][1]))] = lineImage
+
+        print("Number of lines: ", len(self.lines), "Should be summation of digits up to numNails: ", self.numNails)
+                
 
     def display(self):
         cv2.imwrite(self.resultImage, self.image)
@@ -86,30 +101,19 @@ class Spinboard:
         print("Done!")
 
     def getNextNail(self):
-        bestLine = max(self.currentNail.lines, key=self.getBestLine)
+        lines = [(key, line) for key, line in self.lines.items() if self.currentNail in key]
+        bestLine = max(lines, key=self.getBestLine)
+        # bestLine = max(self.currentNail.lines, key=self.getBestLine)
         self.image = self.drawLine(bestLine[1])
         self.goalImage = self.subtractLine(bestLine[1])
-        self.currentNail = bestLine[0]
+        if self.currentNail == bestLine[0][0]:
+            self.currentNail = bestLine[0][1]
+        else:
+            self.currentNail = bestLine[0][0]
         return self.lineHeuristic(self.image)
 
     def getBestLine(self, line):
         return self.lineHeuristic(line[1])
-
-    def drawLine(self, line):
-        image = self.image.copy().astype(float)
-        line = line.astype(float)
-        
-        alpha = image[:, :, 3] / 255
-        line_alpha = line[:, :, 3] / 255
-        
-        new_alpha = (alpha + line_alpha - alpha * line_alpha) * 255
-        new_pixels = (image[:, :, :3] * alpha[:, :, np.newaxis] * (1 - line_alpha[:, :, np.newaxis]) + line[:, :, :3] * line_alpha[:, :, np.newaxis])
-        
-        result = np.zeros_like(image)
-        result[:, :, :3] = new_pixels
-        result[:, :, 3] = new_alpha
-        
-        return result.astype(np.uint8)
     
     def lineHeuristic(self, line):
         alpha = line[:, :, 3] / 255
@@ -134,6 +138,22 @@ class Spinboard:
 
         cv2.imwrite("EdittedGoalImage.png", result)
         return result
+
+    def drawLine(self, line):
+        image = self.image.copy().astype(float)
+        line = line.astype(float)
+        
+        alpha = image[:, :, 3] / 255
+        line_alpha = line[:, :, 3] / 255
+        
+        new_alpha = (alpha + line_alpha - alpha * line_alpha) * 255
+        new_pixels = (image[:, :, :3] * alpha[:, :, np.newaxis] * (1 - line_alpha[:, :, np.newaxis]) + line[:, :, :3] * line_alpha[:, :, np.newaxis])
+        
+        result = np.zeros_like(image)
+        result[:, :, :3] = new_pixels
+        result[:, :, 3] = new_alpha
+        
+        return result.astype(np.uint8)
 
 # spinboard = Spinboard("images/result.png", nails=[])
 # for i in range(50):
