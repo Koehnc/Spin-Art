@@ -2,7 +2,6 @@ import math
 import random
 import numpy as np
 import cv2
-from Nail import Nail
 
 class Spinboard:
     def __init__(self, goalImage, numNails = None, nails = None, resultImage = "Spinboard.png"):
