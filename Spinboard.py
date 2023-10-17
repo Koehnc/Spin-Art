@@ -32,58 +32,46 @@ class Spinboard:
             # init the starting circle
             self.image = np.zeros((self.width, self.height, 4), dtype=np.uint8)
             color = (255, 255, 255, 255)  # White color in RGBA format (full opacity)
-            # cv2.circle(self.image, (self.radius, self.radius), self.radius, color, thickness=-1)  # -1 for a filled circle
             cv2.ellipse(self.image, (int(self.height / 2), int(self.width / 2)), (int(self.height / 2), int(self.width / 2)), 0, 0, 360, color, -1)
 
             self.nails = []
-            if (self.numNails == None):
-                self.numNails = 50
+            if (numNails == None):
+                numNails = 50
             self.nails = []
             a = self.width / 2  # Semi-major axis
             b = self.height / 2  # Semi-minor axis
 
-            for i in range(self.numNails):
-                angle = 2 * math.pi * i / self.numNails
+            for i in range(numNails):
+                angle = 2 * math.pi * i / numNails
                 x = b * math.cos(angle)  # Calculate x-coordinate
                 y = a * math.sin(angle)  # Calculate y-coordinate
-                # self.addNail((int(x + b), int(y + a)))  # Offset by the center of the rectangle
-                self.nails.append((int(x + b), int(y + a)))
-                # self.numNails -= 1
+                self.addNail((int(x + b), int(y + a)))
             self.currentNail = self.nails[0]
         else:
             self.nails = []
             for i in range(0, len(nails)):
-                # self.addNail((nails[i][0], nails[i][1]))
-                self.nails.append((nails[i][0], nails[i][1]))
+                self.addNail((nails[i][0], nails[i][1]))
             self.numNails = len(self.nails)
 
-        color = (0, 0, 0, 64)
-        thickness = 1
-        whiteImage = np.zeros((self.width, self.height, 4), dtype=np.uint8)
-        for i in range(0, len(self.nails)):
-            for j in range(i + 1, len(self.nails)):
-                lineImage = cv2.line(whiteImage.copy(), (self.nails[i][0], self.nails[i][1]), (self.nails[j][0], self.nails[j][1]), color, thickness)
-                lineImage = cv2.GaussianBlur(lineImage, (3, 3), 0)
-                self.lines[((self.nails[i][0], self.nails[i][1]), (self.nails[j][0], self.nails[j][1]))] = lineImage
-
-        print("Number of lines: ", len(self.lines), "Should be summation of digits up to numNails: ", self.numNails)
+        # print("Number of lines: ", len(self.lines), "Should be summation of digits up to numNails: ", self.numNails)
                 
 
     def display(self):
         cv2.imwrite(self.resultImage, self.image)
 
-    def addNail(self, newNailTuple):
-        newNail = Nail(self.width, self.height, newNailTuple[0], newNailTuple[1])
-        if (self.nails.count(newNail) > 0):
-            return
+    def addNail(self, newNail):
+        # Draw the nail
         color = (75, 75, 75, 255)
-        cv2.circle(self.image, (newNail.x, newNail.y), 3, color, thickness=-1)  # -1 for a filled circle
-        # Draw the nails and add the lines to each nail
+        cv2.circle(self.image, (newNail[0], newNail[1]), 3, color, thickness=-1)  # -1 for a filled circle
+
+        # Calc the line and update it to self.lines
+        color = (0, 0, 0, 64)
+        thickness = 1
+        whiteImage = np.zeros((self.width, self.height, 4), dtype=np.uint8)
         for nail in self.nails:
-            # This only adds the line if the pixels are too close, which could fuck up none circle/ellipse
-            if math.sqrt((nail.x - newNail.x) ** 2 + (nail.y - newNail.y) ** 2) > 0:
-                nail.addLine(newNail)
-                newNail.addLine(nail)
+            lineImage = cv2.line(whiteImage.copy(), (nail[0], nail[1]), (newNail[0], newNail[1]), color, thickness)
+            lineImage = cv2.GaussianBlur(lineImage, (3, 3), 0)
+            self.lines[((nail[0], nail[1]), (newNail[0], newNail[1]))] = lineImage
         self.nails.append(newNail)
         self.currentNail = newNail
         self.numNails += 1
