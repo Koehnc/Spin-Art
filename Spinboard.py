@@ -18,6 +18,14 @@ class Spinboard:
         self.image = np.ones((self.width, self.height, 4), dtype=np.uint8) * 255
         self.display()
 
+        # Init the goal image
+        # (This becomes an all black photo where the alpha channel is a fxn of BW intensity. Basically more black = more opaque)
+        black_image = 255 * np.ones_like(self.goalImage)
+        bw_goal_image = cv2.cvtColor(self.goalImage, cv2.COLOR_BGR2GRAY)
+        result_image = cv2.cvtColor(black_image, cv2.COLOR_BGR2BGRA)
+        result_image[:, :, 3] = 255 - bw_goal_image
+        self.goalImage = result_image
+
         # init self.nails
         if (nails == None):
             # init the starting circle
@@ -71,17 +79,18 @@ class Spinboard:
 
     def drawLines(self, numLines):
         for i in range(numLines):
-            print(self.getNextNail())
+            self.getNextNail()
             self.display()
 
     def getNextNail(self):
-        bestLine = min(self.currentNail.lines, key=self.getBestLine)
+        bestLine = max(self.currentNail.lines, key=self.getBestLine)
         self.image = self.drawLine(bestLine[1])
+        self.goalImage = self.subtractLine(bestLine[1])
         self.currentNail = bestLine[0]
-        return self.getDifferenceMean(self.image)
+        return self.getDifferenceMeanAlpha(self.image)
 
     def getBestLine(self, line):
-        return self.getDifferenceMean(self.drawLine(line[1]))
+        return self.getDifferenceMeanAlpha(line[1])
 
     def drawLine(self, line):
         image = self.image.copy().astype(float)
@@ -103,7 +112,7 @@ class Spinboard:
     Gets the difference/error from the given image to the goalImage that is a
     class attribute
     '''
-    def getDifferenceMean(self, image):
+    def getDifferenceMeanChannels(self, image):
         # Extract the RGB channels from the images
         image_channels = image[:, :, :3]
         goal_image_channels = self.goalImage[:, :, :3]
@@ -115,6 +124,29 @@ class Spinboard:
         mean_diff = np.mean(abs_diff)
 
         return mean_diff
+    
+    def getDifferenceMeanAlpha(self, line):
+        alpha = line[:, :, 3]
+        goalAlpha = self.goalImage[:, :, 3]
+
+        return np.sum(alpha * goalAlpha)
+    
+    def subtractLine(self, line):
+        alpha1 = self.goalImage[:, :, 3] / 255.0
+        alpha2 = line[:, :, 3] / 255.0
+
+        # resulting_alpha = alpha1 + alpha2 - (alpha1 * alpha2)     # This is "addition"
+        resulting_alpha = abs(alpha1 - alpha2)
+
+        resulting_alpha *= 255
+        resulting_alpha = resulting_alpha.astype(np.uint8)
+
+        result = np.zeros((self.width, self.height, 4), dtype=np.uint8)
+        result[:, :, :3] = self.goalImage[:, :, :3]
+        result[:, :, 3] = resulting_alpha
+
+        cv2.imwrite("EdittedGoalImage.png", result)
+        return result
 
 # spinboard = Spinboard("images/result.png", nails=[])
 # for i in range(50):
