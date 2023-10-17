@@ -79,8 +79,11 @@ class Spinboard:
 
     def drawLines(self, numLines):
         for i in range(numLines):
-            self.getNextNail()
+            if i % 100 == 0:
+                print("iter:", i)
             self.display()
+            self.getNextNail()
+        print("Done!")
 
     def getNextNail(self):
         bestLine = max(self.currentNail.lines, key=self.getBestLine)
