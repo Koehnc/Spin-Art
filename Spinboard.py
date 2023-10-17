@@ -3,6 +3,16 @@ import random
 import numpy as np
 import cv2
 
+'''
+Progression:
+ - Implement Weighting certain parts of the image
+    - Start with blank image of that size, 128 is nothing, white is negative, black is positive, (-.5 during calc will be perfect)
+ - Fix the Memory issue for starting with more nails
+ - Implement multiple colors
+
+Easier:
+ - Comments :)
+'''
 class Spinboard:
     def __init__(self, goalImage, numNails = None, nails = None, resultImage = "Spinboard.png"):
         self.goalImage = cv2.imread(goalImage, cv2.IMREAD_UNCHANGED)
