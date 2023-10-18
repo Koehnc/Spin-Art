@@ -14,9 +14,10 @@ Easier:
  - Comments :)
 '''
 class Spinboard:
-    def __init__(self, goalImage, numNails = None, nails = None, resultImage = "Spinboard.png"):
+    def __init__(self, goalImage, numNails = None, nails = None, resultImage = "Spinboard.png", weightedImage = None):
         self.goalImage = cv2.imread(goalImage, cv2.IMREAD_UNCHANGED)
         self.resultImage = resultImage
+        self.weights = weightedImage
         # radius * 2 is the same as the width and height for a square
         self.width = self.goalImage.shape[0]
         self.height = self.goalImage.shape[1]
@@ -36,6 +37,18 @@ class Spinboard:
         result_image = cv2.cvtColor(black_image, cv2.COLOR_BGR2BGRA)
         result_image[:, :, 3] = 255 - bw_goal_image
         self.goalImage = result_image
+
+        # Init the weightedImage/self.weights
+        if (self.weights == None):
+            self.weights = 255 * np.ones_like(self.goalImage)
+        else:
+            self.weights = cv2.imread(weightedImage, cv2.IMREAD_UNCHANGED)
+            white_image = 255 * np.ones_like(self.goalImage)
+            bw_goal_image = cv2.cvtColor(self.weights, cv2.COLOR_BGR2GRAY)
+            result_image = cv2.cvtColor(white_image, cv2.COLOR_BGR2BGRA)
+            result_image[:, :, 3] = 255 - bw_goal_image
+            self.weights = result_image
+            cv2.imwrite("WeightedImage.png", self.weights)
 
         # init self.nails
         if (nails == None):
@@ -115,8 +128,9 @@ class Spinboard:
     def lineHeuristic(self, line):
         alpha = line[:, :, 3] / 255
         goalAlpha = self.goalImage[:, :, 3] / 255
+        weightedAlpha = self.weights[:, :, 3] / 255
 
-        return np.sum(alpha * goalAlpha) / alpha.size**2
+        return np.sum(alpha * goalAlpha * weightedAlpha) / alpha.size**2
     
     def subtractLine(self, line):
         alpha1 = self.goalImage[:, :, 3] / 255.0
@@ -196,3 +210,6 @@ class Spinboard:
 # 40, 68, 23, 42, 57, 34, 6, 87, 59, 47, 94, 22, 69, 95, 54, 42, 12, 36, 19, 85, 72, 89, 4, 31, 64, 45, 66, 89, 1, 81, 29, 71, 86, 14, 30, 79, 52, 85, 25, 45, 9, 42, 73, 38, 18, 73, 91, 5, 30, 11, 55, 41, 65, 48, 
 # 60, 37, 76, 93, 61, 25, 74, 87, 10, 36, 8, 27, 72, 84, 98, 44, 96, 71, 36, 66, 23, 95, 77, 93, 49, 63, 19, 89, 6, 57, 46, 2, 86, 7, 29, 13, 39, 70, 95, 22, 76, 30, 48, 67, 31, 69, 93, 75, 35, 14, 55, 28, 5, 43, 
 # 54, 3, 82, 56, 40, 62, 24, 42, 60, 47, 23, 94, 63, 38, 21, 62, 87, 0, 88, 75, 94, 39, 11, 47, 64, 19, 77, 92, 24, 46, 59, 91, 45, 20, 86, 74, 89, 67, 49, 33, 65, 45, 60, 34, 84, 10, 30, 69, 81, 5, 58, 48, 29, 14, 32, 7, 91, 56, 13, 83, 71, 88, 10, 28, 12, 54, 39, 93, 6, 43, 73, 93, 42, 8, 52, 40, 24, 44, 4, 87, 72, 24, 94, 55, 97, 80, 15, 78, 99, 44, 61, 49, 62, 26, 83, 29, 5, 92, 63, 18, 35, 61, 31, 48, 96, 23, 38, 17, 76, 89, 2, 39, 69, 15, 41, 53, 80, 70, 84, 7, 26, 84, 73, 34, 64, 25, 87, 99, 85, 5, 27, 57, 38, 54, 28, 73, 17, 33, 6, 58, 93, 62, 86, 4, 90, 67, 23, 45, 56, 15, 94, 61, 43, 25, 84, 14, 43, 94, 77, 16, 40, 73, 83, 55, 81, 70, 86, 98, 79, 27, 12, 85, 11, 29, 55, 37, 59, 48, 32, 18, 75, 15, 81, 6, 52, 41, 62, 29, 70, 32, 52, 3, 88, 65, 22, 37, 65, 49, 59, 43, 8, 82, 34, 19, 62, 91, 2, 90, 0, 38, 93, 10, 89, 63, 36, 17, 40, 9, 27, 6, 85, 74, 20, 66, 85, 29, 80, 13, 57, 47, 8, 26, 67, 47, 22, 36, 50, 63, 33, 67, 88, 6, 94, 66, 50, 38, 11, 86, 72, 83, 70, 93, 2, 84, 13, 45, 97, 81, 71, 15, 57, 44, 25, 40, 59, 36, 23, 71, 82, 14, 28, 66, 91, 1, 54, 6, 50, 61, 36, 11, 42, 53, 93, 24, 68, 14, 69, 79, 16, 42, 62, 22, 38, 20, 33, 60, 24, 64, 92, 76, 88, 98, 85, 9, 94, 48, 69, 94, 5, 83, 11, 41, 68, 90, 77, 91, 39, 19, 35, 72, 91, 9, 47, 56, 28, 7, 87, 70, 85, 35, 23, 73, 82, 30, 49, 58, 41, 63, 95, 62, 18, 74, 21, 37, 69, 47, 3, 89, 99, 53, 43, 13, 88, 5, 45, 55, 2, 92, 57, 83, 74, 38, 13, 27, 14, 79, 33, 8, 87, 30, 4, 41, 66, 52, 39, 72, 33, 23, 5, 86, 75, 14, 54, 34, 49, 66, 29, 10, 78, 0, 89, 56], 1/3)
+
+spinboard = Spinboard("images/Butterfly.png", 100, weightedImage="images/Butterfly_weights.png")
+order = spinboard.drawLines(2500)
