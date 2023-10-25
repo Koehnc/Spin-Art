@@ -2,6 +2,7 @@ import math
 import random
 import numpy as np
 import cv2
+from scipy.sparse import csr_matrix
 
 '''
 Progression:
@@ -85,6 +86,16 @@ class Spinboard:
             self.numNails = len(self.nails)
         # print("Number of lines: ", len(self.lines), "Should be summation of digits up to numNails: ", self.numNails)
 
+    def convertToMatrix(self, image):
+        return image[:, :, 3]
+
+    def convertToImage(self, matrix):
+        height, width = matrix.shape
+        image = np.zeros((height, width, 4), dtype=np.uint8)
+        image[:, :, 3] = matrix
+        cv2.imwrite("Test.png", image)
+        return image
+
     def display(self):
         cv2.imwrite(self.resultImage, self.image)
 
@@ -97,10 +108,11 @@ class Spinboard:
         if (addLines):
             color = (0, 0, 0, 64)
             thickness = 1
-            whiteImage = np.zeros((self.width, self.height, 4), dtype=np.uint8)
             for nail in self.nails:
-                lineImage = cv2.line(whiteImage.copy(), (nail[0], nail[1]), (newNail[0], newNail[1]), color, thickness)
+                whiteImage = np.zeros((self.width, self.height, 4), dtype=np.uint8)
+                lineImage = cv2.line(whiteImage, (nail[0], nail[1]), (newNail[0], newNail[1]), color, thickness)
                 lineImage = cv2.GaussianBlur(lineImage, (3, 3), 0)
+                lineImage = self.convertToMatrix(lineImage)
                 self.lines[((nail[0], nail[1]), (newNail[0], newNail[1]))] = lineImage
         self.nails.append(newNail)
         self.currentNail = newNail
@@ -134,7 +146,7 @@ class Spinboard:
         return self.lineHeuristic(line[1])
     
     def lineHeuristic(self, line):
-        alpha = line[:, :, 3] / 255
+        alpha = line / 255
         goalAlpha = self.goalImage[:, :, 3] / 255
         weightedAlpha = self.weights[:, :, 3] / 255
 
@@ -142,7 +154,7 @@ class Spinboard:
     
     def subtractLine(self, line):
         alpha1 = self.goalImage[:, :, 3] / 255.0
-        alpha2 = line[:, :, 3] / 255.0
+        alpha2 = line / 255.0
 
         # resulting_alpha = alpha1 + alpha2 - (alpha1 * alpha2)     # This is "addition"
         resulting_alpha = alpha1 - alpha2 * .7
@@ -160,6 +172,7 @@ class Spinboard:
 
     def drawLine(self, line):
         image = self.image.copy().astype(float)
+        line = self.convertToImage(line)
         line = line.astype(float)
         
         alpha = image[:, :, 3] / 255
