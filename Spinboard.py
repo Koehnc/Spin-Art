@@ -55,7 +55,7 @@ class Spinboard:
         if (self.weights == None):
             self.weights = 255 * np.ones_like(self.goalImage)
         else:
-            self.weights = cv2.imread(weightedImage, cv2.IMREAD_UNCHANGED)
+            self.weights = cv2.imread(self.weights, cv2.IMREAD_UNCHANGED)
             white_image = 255 * np.ones_like(self.goalImage)
             bw_goal_image = cv2.cvtColor(self.weights, cv2.COLOR_BGR2GRAY)
             result_image = cv2.cvtColor(white_image, cv2.COLOR_BGR2BGRA)

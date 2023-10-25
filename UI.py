@@ -11,7 +11,8 @@ class ImageDisplayApp(QMainWindow):
         super().__init__()
 
         # Handle the drawing code
-        self.image = "images/Monroe_crop.png"
+        self.image = None
+        self.weights = None
         self.process = None
 
         # Handle the options
@@ -36,10 +37,13 @@ class ImageDisplayApp(QMainWindow):
         central_layout = QVBoxLayout(self.central_widget)
 
         # Create an options bar widget
+        instruction_bar = QWidget()
+        instructions_layout = QHBoxLayout(instruction_bar)
         control_bar = QWidget()
         control_buttons_layout = QHBoxLayout(control_bar)
         input_bar = QWidget()
         input_bar_layout = QHBoxLayout(input_bar)
+        central_layout.addWidget(instruction_bar)
         central_layout.addWidget(control_bar)
         central_layout.addWidget(input_bar)
 
@@ -58,24 +62,27 @@ class ImageDisplayApp(QMainWindow):
         self.left_view.setScene(self.left_scene)
         self.right_view.setScene(self.right_scene)
 
-        # Load and display initial images in QGraphicsViews
-        self.load_and_display_images()
-
         # Add the views_layout (containing the views) to the central layout
         central_layout.addLayout(views_layout)
 
         # Create buttons for the options bar
         load_button = QPushButton("Load Image")
+        weights_button = QPushButton("Load Weights")
         runButton = QPushButton("Run SpinBoard")
         stop_button = QPushButton("Stop SpinBoard")
 
         # Connect functions to button clicks
         runButton.clicked.connect(self.runSpinboard)
+        weights_button.clicked.connect(self.load_weights)
         load_button.clicked.connect(self.load_left_image)  # Connect the load button to a function
         stop_button.clicked.connect(self.stopSpinboard)  # Connect the clear button to a function
 
+        # Add the instructions at the top
+        instructions_layout.addWidget(QLabel("Load an image, a weighted image is optional, and hit run!"))
+
         # Add buttons to the options layout
         control_buttons_layout.addWidget(load_button)
+        control_buttons_layout.addWidget(weights_button)
         control_buttons_layout.addWidget(runButton)
         control_buttons_layout.addWidget(stop_button)
         
@@ -107,7 +114,7 @@ class ImageDisplayApp(QMainWindow):
 
     def runSpinboard(self):
         if (self.spinboard.numNails == 0):
-            self.spinboard = Spinboard(self.image, int(self.numNails.text()))
+            self.spinboard = Spinboard(self.image, int(self.numNails.text()), weightedImage=self.weights)
             self.process = multiprocessing.Process(target=self.spinboard.drawLines, args=(int(self.numThreads.text()),))
             self.process.start()
         else:
@@ -122,10 +129,12 @@ class ImageDisplayApp(QMainWindow):
         if self.process and self.process.is_alive():
             self.process.terminate()
 
-        # Clear the image in the right QGraphicsView
-        # self.right_scene.clear()
-        # self.spinboard = Spinboard(self.image, nails=[])
-        # self.load_and_display_images()
+    def load_weights(self):
+        # Function to load and display a user-selected left image
+        options = QFileDialog.Options()
+        file_path, _ = QFileDialog.getOpenFileName(self, "Open Image File", "", "Image Files (*.png *.jpg *.jpeg *.bmp *.gif);;All Files (*)", options=options)
+        if file_path:
+            self.weights = file_path
 
     def load_left_image(self):
         # Function to load and display a user-selected left image
@@ -135,10 +144,11 @@ class ImageDisplayApp(QMainWindow):
             self.image = file_path
             self.spinboard = Spinboard(self.image, nails=[])
             self.stopSpinboard()
+        self.load_and_display_images()
 
     def mousePressEvent(self, event):
         # Handle mouse clicks in the right QGraphicsView
-        if event.button() == Qt.LeftButton:
+        if event.button() == Qt.LeftButton and self.image != None:
             scene_pos = self.right_view.mapTo(self.central_widget, QPoint(0, 0))
             click_pos = event.pos() - scene_pos
             
