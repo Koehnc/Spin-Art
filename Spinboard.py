@@ -2,24 +2,27 @@ import math
 import random
 import numpy as np
 import cv2
-from scipy.sparse import csr_matrix
+import time
+import sys
 
 '''
 Progression:
- - Implement Weighting certain parts of the image
-    - Start with blank image of that size, 128 is nothing, white is negative, black is positive, (-.5 during calc will be perfect)
  - Fix the Memory issue for starting with more nails
  - Implement multiple colors
+    - Intensity of not rgb: treat rgb of wanted as weights to get the "grayscale"
 
 Easier:
  - Comments :)
+ - Update UI
+    - Add Weights
+    - Add from existing order
+    - Add Color option
 '''
 class Spinboard:
     def __init__(self, goalImage, numNails = None, nails = None, resultImage = "Spinboard.png", weightedImage = None):
         self.goalImage = cv2.imread(goalImage, cv2.IMREAD_UNCHANGED)
         self.resultImage = resultImage
         self.weights = weightedImage
-        # radius * 2 is the same as the width and height for a square
         self.width = self.goalImage.shape[0]
         self.height = self.goalImage.shape[1]
         self.radius = min(int(self.width / 2), int(self.height / 2))
@@ -120,20 +123,21 @@ class Spinboard:
         self.display()
 
     def drawLines(self, numLines):
+        start = time.time()
         self.order.append(self.nails.index(self.currentNail))
         for i in range(numLines):
             if i % 100 == 0:
                 print("iter:", i)
             self.display()
             self.order.append(self.nails.index(self.getNextNail()))
-        print("Done!")
+        end = time.time()
+        print("Done!", end - start, "seconds")
         print("Order: ", self.order)
         return self.order
 
     def getNextNail(self):
         lines = [(key, line) for key, line in self.lines.items() if self.currentNail in key]
         bestLine = max(lines, key=self.getBestLine)
-        # bestLine = max(self.currentNail.lines, key=self.getBestLine)
         self.image = self.drawLine(bestLine[1])
         self.goalImage = self.subtractLine(bestLine[1])
         if self.currentNail == bestLine[0][0]:
@@ -143,6 +147,11 @@ class Spinboard:
         return self.currentNail
 
     def getBestLine(self, line):
+        # whiteImage = np.zeros((self.width, self.height, 4), dtype=np.uint8)
+        # lineImage = cv2.line(whiteImage, (line[0][0][0], line[0][0][1]), (line[0][1][0], line[0][1][1]), (0, 0, 0, 64), 1)
+        # lineImage = cv2.GaussianBlur(lineImage, (3, 3), 0)
+        # lineImage = self.convertToMatrix(lineImage)
+
         return self.lineHeuristic(line[1])
     
     def lineHeuristic(self, line):
@@ -171,17 +180,15 @@ class Spinboard:
         return result
 
     def drawLine(self, line):
-        image = self.image.copy().astype(float)
-        line = self.convertToImage(line)
         line = line.astype(float)
         
-        alpha = image[:, :, 3] / 255
-        line_alpha = line[:, :, 3] / 255
+        alpha = self.image[:, :, 3] / 255.0
+        line_alpha = line / 255.0
         
         new_alpha = (alpha + line_alpha - alpha * line_alpha) * 255
-        new_pixels = (image[:, :, :3] * alpha[:, :, np.newaxis] * (1 - line_alpha[:, :, np.newaxis]) + line[:, :, :3] * line_alpha[:, :, np.newaxis])
+        new_pixels = (self.image[:, :, :3] * alpha[:, :, np.newaxis] * (1 - line_alpha[:, :, np.newaxis]))
         
-        result = np.zeros_like(image)
+        result = np.zeros_like(self.image)
         result[:, :, :3] = new_pixels
         result[:, :, 3] = new_alpha
         
@@ -191,18 +198,18 @@ class Spinboard:
         self.width = int(self.width * sizeFactor)
         self.height = int(self.height * sizeFactor)
         self.image = np.zeros((self.width, self.height, 4), dtype=np.uint8)
-        color = (255, 255, 255, 255)  # White color in RGBA format (full opacity)
+        color = (255, 255, 255, 255) 
         cv2.ellipse(self.image, (int(self.height / 2), int(self.width / 2)), (int(self.height / 2), int(self.width / 2)), 0, 0, 360, color, -1)
         
         self.lines = {}
         self.nails = []
-        a = self.width / 2  # Semi-major axis
-        b = self.height / 2  # Semi-minor axis
+        a = self.width / 2
+        b = self.height / 2 
 
         for i in range(self.numNails):
             angle = 2 * math.pi * i / self.numNails
-            x = b * math.cos(angle)  # Calculate x-coordinate
-            y = a * math.sin(angle)  # Calculate y-coordinate
+            x = b * math.cos(angle)
+            y = a * math.sin(angle) 
             self.addNail((int(x + b), int(y + a)), False)
             self.numNails -= 1
 
@@ -212,6 +219,7 @@ class Spinboard:
         for i in range(len(order) - 1):
             lineImage = cv2.line(whiteImage.copy(), (self.nails[order[i]][0], self.nails[order[i]][1]), (self.nails[order[i+1]][0], self.nails[order[i+1]][1]), color, thickness)
             lineImage = cv2.GaussianBlur(lineImage, (3, 3), 0)
+            lineImage = self.convertToMatrix(lineImage)
             self.image = self.drawLine(lineImage)
             self.display()
         
