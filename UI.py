@@ -1,7 +1,7 @@
 import sys
 import multiprocessing
-from PyQt5.QtWidgets import QApplication, QMainWindow, QGraphicsView, QGraphicsScene, QGraphicsPixmapItem, QVBoxLayout, QWidget, QPushButton, QHBoxLayout, QFileDialog
-from PyQt5.QtGui import QPixmap, QPainter, QPen
+from PyQt5.QtWidgets import QApplication, QMainWindow, QGraphicsView, QGraphicsScene, QGraphicsPixmapItem, QVBoxLayout, QWidget, QPushButton, QHBoxLayout, QFileDialog, QLineEdit, QLabel
+from PyQt5.QtGui import QPixmap, QPainter, QPen, QIntValidator
 from PyQt5.QtCore import Qt, QPoint, QTimer, QObject
 
 from Spinboard import Spinboard
@@ -12,8 +12,16 @@ class ImageDisplayApp(QMainWindow):
 
         # Handle the drawing code
         self.image = "images/Monroe_crop.png"
-        self.spinboard = Spinboard(self.image, nails=[])
         self.process = None
+
+        # Handle the options
+        self.numThreads = QLineEdit()
+        self.numThreads.setValidator(QIntValidator())  # Restrict input to integers
+        self.numThreads.setText("1000")
+
+        self.numNails = QLineEdit()
+        self.numNails.setValidator(QIntValidator())  # Restrict input to integers
+        self.numNails.setText("100")
 
         # Set up the main window with the updated geometry
         self.setWindowTitle("Image Display App")
@@ -28,9 +36,12 @@ class ImageDisplayApp(QMainWindow):
         central_layout = QVBoxLayout(self.central_widget)
 
         # Create an options bar widget
-        options_bar = QWidget()
-        options_layout = QHBoxLayout(options_bar)
-        central_layout.addWidget(options_bar)
+        control_bar = QWidget()
+        control_buttons_layout = QHBoxLayout(control_bar)
+        input_bar = QWidget()
+        input_bar_layout = QHBoxLayout(input_bar)
+        central_layout.addWidget(control_bar)
+        central_layout.addWidget(input_bar)
 
         # Create left and right QGraphicsViews and place them in a horizontal layout
         views_layout = QHBoxLayout()
@@ -54,19 +65,26 @@ class ImageDisplayApp(QMainWindow):
         central_layout.addLayout(views_layout)
 
         # Create buttons for the options bar
+        load_button = QPushButton("Load Image")
         runButton = QPushButton("Run SpinBoard")
-        load_button = QPushButton("Load Left Image")  # New button for loading left image
-        clear_button = QPushButton("Clear Right Image")  # New button for clearing right image
+        stop_button = QPushButton("Stop SpinBoard")
 
         # Connect functions to button clicks
         runButton.clicked.connect(self.runSpinboard)
         load_button.clicked.connect(self.load_left_image)  # Connect the load button to a function
-        clear_button.clicked.connect(self.clear_right_image)  # Connect the clear button to a function
+        stop_button.clicked.connect(self.stopSpinboard)  # Connect the clear button to a function
 
         # Add buttons to the options layout
-        options_layout.addWidget(runButton)
-        options_layout.addWidget(load_button)
-        options_layout.addWidget(clear_button)
+        control_buttons_layout.addWidget(load_button)
+        control_buttons_layout.addWidget(runButton)
+        control_buttons_layout.addWidget(stop_button)
+        
+        # Add QLabels and QLineEdits to the input bar
+        input_bar_layout.addWidget(QLabel("Number of Nails:"))
+        input_bar_layout.addWidget(self.numNails)
+        input_bar_layout.addWidget(QLabel("Number of Threads:"))
+        input_bar_layout.addWidget(self.numThreads)
+
 
     def load_and_display_images(self):
         self.left_scene.clear()
@@ -89,25 +107,25 @@ class ImageDisplayApp(QMainWindow):
 
     def runSpinboard(self):
         if (self.spinboard.numNails == 0):
-            self.spinboard = Spinboard(self.image, 150)
-            self.process = multiprocessing.Process(target=self.spinboard.drawLines, args=(300,))
+            self.spinboard = Spinboard(self.image, int(self.numNails.text()))
+            self.process = multiprocessing.Process(target=self.spinboard.drawLines, args=(int(self.numThreads.text()),))
             self.process.start()
         else:
-            self.process = multiprocessing.Process(target=self.spinboard.drawLines, args=(1250,))
+            self.process = multiprocessing.Process(target=self.spinboard.drawLines, args=(int(self.numThreads.text()),))
             self.process.start()
         
         timer = QTimer(self)
         timer.timeout.connect(self.load_and_display_images)
         timer.start(100)
         
-    def clear_right_image(self):
+    def stopSpinboard(self):
         if self.process and self.process.is_alive():
             self.process.terminate()
 
         # Clear the image in the right QGraphicsView
-        self.right_scene.clear()
-        self.spinboard = Spinboard(self.image, nails=[])
-        self.load_and_display_images()
+        # self.right_scene.clear()
+        # self.spinboard = Spinboard(self.image, nails=[])
+        # self.load_and_display_images()
 
     def load_left_image(self):
         # Function to load and display a user-selected left image
@@ -115,8 +133,8 @@ class ImageDisplayApp(QMainWindow):
         file_path, _ = QFileDialog.getOpenFileName(self, "Open Image File", "", "Image Files (*.png *.jpg *.jpeg *.bmp *.gif);;All Files (*)", options=options)
         if file_path:
             self.image = file_path
-            # self.spinboard = Spinboard(self.image, nails=self.spinboard.nails)
-            self.clear_right_image()
+            self.spinboard = Spinboard(self.image, nails=[])
+            self.stopSpinboard()
 
     def mousePressEvent(self, event):
         # Handle mouse clicks in the right QGraphicsView
