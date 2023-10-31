@@ -14,14 +14,17 @@ Progression:
 Easier:
  - Comments :)
  - Update UI
-    - Add Weights
     - Add from existing order
     - Add Color option
-    - Number of nails option
-    - Number of Threads option
+
+Important Notes:
+ - The amount that the line affects the image is related to the opacity of line, but more importantly the line shape itself
+ - This also affects the line heuristic function interestingly enough
+ - 
+ - Color of thread shouldn't change the order that the threads are put on
 '''
 class Spinboard:
-    def __init__(self, goalImage, numNails = None, nails = None, resultImage = "Spinboard.png", weightedImage = None):
+    def __init__(self, goalImage, numNails = None, nails = None, resultImage = "Spinboard.png", weightedImage = None, threadColor = (0, 0, 0, 60), replacedColor = (0, 0, 0)):
         self.goalImage = cv2.imread(goalImage, cv2.IMREAD_UNCHANGED)
         self.resultImage = resultImage
         self.weights = weightedImage
@@ -34,20 +37,23 @@ class Spinboard:
         self.image = np.ones((self.width, self.height, 4), dtype=np.uint8) * 255
         self.lines = {}
         self.order = []
+        self.threadColor = threadColor
         self.display()
 
 
-        self.initGoalImage()
+        self.initGoalImage(replacedColor)
         self.initWeights()
         self.initNails(nails, numNails)
 
-    def initGoalImage(self):
-        # Init the goal image
-        # (This becomes an all black photo where the alpha channel is a fxn of BW intensity. Basically more black = more opaque)
-        black_image = 255 * np.ones_like(self.goalImage)
-        bw_goal_image = cv2.cvtColor(self.goalImage, cv2.COLOR_BGR2GRAY)
-        result_image = cv2.cvtColor(black_image, cv2.COLOR_BGR2BGRA)
-        result_image[:, :, 3] = 255 - bw_goal_image
+    def initGoalImage(self, color):
+        whiteImage = 255 * np.ones_like(self.goalImage)
+
+        euclidean_distance = np.linalg.norm(self.goalImage[:, :, :3] - np.array(color), axis=-1)
+        euclidean_distance /= np.max(euclidean_distance)
+        euclidean_distance *= 255
+                    
+        result_image = cv2.cvtColor(whiteImage, cv2.COLOR_BGR2BGRA)
+        result_image[:, :, 3] = 255 - euclidean_distance
         self.goalImage = result_image
 
     def initWeights(self):
@@ -96,9 +102,8 @@ class Spinboard:
 
     def convertToImage(self, matrix):
         height, width = matrix.shape
-        image = np.zeros((height, width, 4), dtype=np.uint8)
+        image = np.full((height, width, 4), self.threadColor, dtype=np.uint8)
         image[:, :, 3] = matrix
-        cv2.imwrite("Test.png", image)
         return image
 
     def display(self):
@@ -111,12 +116,16 @@ class Spinboard:
 
         # Calc the line and update it to self.lines
         if (addLines):
-            color = (0, 0, 0, 64)
-            thickness = 1
             for nail in self.nails:
                 whiteImage = np.zeros((self.width, self.height, 4), dtype=np.uint8)
+
+                thickness = 2
+                color = tuple(value / 3 if i == 3 else value for i, value in enumerate(self.threadColor))
                 lineImage = cv2.line(whiteImage, (nail[0], nail[1]), (newNail[0], newNail[1]), color, thickness)
-                lineImage = cv2.GaussianBlur(lineImage, (3, 3), 0)
+
+                thickness = 1
+                lineImage = cv2.line(whiteImage, (nail[0], nail[1]), (newNail[0], newNail[1]), self.threadColor, thickness)
+
                 lineImage = self.convertToMatrix(lineImage)
                 self.lines[((nail[0], nail[1]), (newNail[0], newNail[1]))] = lineImage
         self.nails.append(newNail)
@@ -155,7 +164,7 @@ class Spinboard:
         # lineImage = self.convertToMatrix(lineImage)
 
         return self.lineHeuristic(line[1])
-    
+        
     def lineHeuristic(self, line):
         alpha = line / 255
         goalAlpha = self.goalImage[:, :, 3] / 255
@@ -168,7 +177,7 @@ class Spinboard:
         alpha2 = line / 255.0
 
         # resulting_alpha = alpha1 + alpha2 - (alpha1 * alpha2)     # This is "addition"
-        resulting_alpha = alpha1 - alpha2 * .7
+        resulting_alpha = alpha1 - alpha2 * .5
         resulting_alpha = np.maximum(resulting_alpha, 0)
 
         resulting_alpha *= 255
@@ -178,7 +187,7 @@ class Spinboard:
         result[:, :, :3] = self.goalImage[:, :, :3]
         result[:, :, 3] = resulting_alpha
 
-        # cv2.imwrite("EdittedGoalImage.png", result)
+        cv2.imwrite("EdittedGoalImage.png", result)
         return result
 
     def drawLine(self, line):
@@ -188,8 +197,11 @@ class Spinboard:
         line_alpha = line / 255.0
         
         new_alpha = (alpha + line_alpha - alpha * line_alpha) * 255
-        new_pixels = (self.image[:, :, :3] * alpha[:, :, np.newaxis] * (1 - line_alpha[:, :, np.newaxis]))
-        
+
+        # Make sure that self.threadColor has the same number of channels as the image (BGRA)
+        line_color = np.array(self.threadColor, dtype=np.uint8)
+        new_pixels = (self.image[:, :, :3] * alpha[:, :, np.newaxis] * (1 - line_alpha[:, :, np.newaxis])) + (line_color[:3] * line_alpha[:, :, np.newaxis])
+
         result = np.zeros_like(self.image)
         result[:, :, :3] = new_pixels
         result[:, :, 3] = new_alpha
@@ -235,3 +247,6 @@ class Spinboard:
 
 # spinboard = Spinboard("images/Butterfly.png", 100, weightedImage="images/Butterfly_weights.png")
 # order = spinboard.drawLines(2500)
+
+spinboard = Spinboard("images/ColorWheel.png", numNails=100, threadColor=(255, 0, 255, 30), replacedColor=(255, 0, 255))
+order = spinboard.drawLines(500)
