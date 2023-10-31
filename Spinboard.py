@@ -248,5 +248,15 @@ class Spinboard:
 # spinboard = Spinboard("images/Butterfly.png", 100, weightedImage="images/Butterfly_weights.png")
 # order = spinboard.drawLines(2500)
 
-spinboard = Spinboard("images/ColorWheel.png", numNails=100, threadColor=(255, 0, 255, 30), replacedColor=(255, 0, 255))
-order = spinboard.drawLines(500)
+# spinboard = Spinboard("images/ColorWheel.png", numNails=100, threadColor=(255, 0, 0, 30), replacedColor=(255, 0, 0))
+# order = spinboard.drawLines(500)
+# cv2.imwrite("Blue.png", spinboard.image)
+# spinboard2 = Spinboard("images/ColorWheel.png", numNails=100, threadColor=(0, 0, 255, 30), replacedColor=(0, 0, 255))
+# order = spinboard3.drawLines(500)
+# cv2.imwrite("Red.png", spinboard2.image)
+# spinboard3 = Spinboard("images/ColorWheel.png", numNails=100, threadColor=(0, 255, 0, 30), replacedColor=(0, 255, 0))
+# order = spinboard3.drawLines(500)
+# cv2.imwrite("Green.png", spinboard3.image)
+
+mixed = cv2.addWeighted(cv2.imread("Blue.png"), .3333, cv2.imread("Red.png"), .3333, 0)
+cv2.imwrite("Mixed.png", cv2.addWeighted(mixed, .6667, cv2.imread("Green.png"), .3333, 0))
