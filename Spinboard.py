@@ -50,9 +50,8 @@ class Spinboard:
         euclidean_distance /= np.max(euclidean_distance)
         euclidean_distance *= 255
                     
-        result_image = cv2.cvtColor(whiteImage, cv2.COLOR_BGR2BGRA)
-        result_image[:, :, 3] = 255 - euclidean_distance
-        self.goalImage = result_image
+        self.goalImage = cv2.cvtColor(whiteImage, cv2.COLOR_BGR2BGRA)
+        self.goalImage[:, :, 3] = 255 - euclidean_distance
 
     def initWeights(self):
         # Init the weightedImage/self.weights
@@ -62,10 +61,10 @@ class Spinboard:
             self.weights = cv2.imread(self.weights, cv2.IMREAD_UNCHANGED)
             white_image = 255 * np.ones_like(self.goalImage)
             bw_goal_image = cv2.cvtColor(self.weights, cv2.COLOR_BGR2GRAY)
-            result_image = cv2.cvtColor(white_image, cv2.COLOR_BGR2BGRA)
-            result_image[:, :, 3] = 255 - bw_goal_image
-            self.weights = result_image
+            self.weights = cv2.cvtColor(white_image, cv2.COLOR_BGR2BGRA)
+            self.weights[:, :, 3] = 255 - bw_goal_image
             cv2.imwrite("WeightedImage.png", self.weights)
+        self.goalImage = self.goalImage * (self.weights / 255)
 
     def initNails(self, nails, numNails):
         # init self.nails
@@ -166,9 +165,9 @@ class Spinboard:
     def lineHeuristic(self, line):
         alpha = line / 255
         goalAlpha = self.goalImage[:, :, 3] / 255
-        weightedAlpha = self.weights[:, :, 3] / 255
+        # weightedAlpha = self.weights[:, :, 3] / 255
 
-        return np.sum(alpha * goalAlpha * weightedAlpha) / alpha.size**2
+        return np.sum(alpha * goalAlpha) / alpha.size**2
     
     def subtractLine(self, line):
         alpha1 = self.goalImage[:, :, 3] / 255.0
@@ -246,6 +245,10 @@ class Spinboard:
 # spinboard = Spinboard("images/Butterfly.png", 100, weightedImage="images/Butterfly_weights.png")
 # order = spinboard.drawLines(2500)
 
-spinboard = Spinboard("images/ColorWheel.png", numNails=100, threadColor=(255, 0, 0, 30), replacedColor=(255, 0, 0))
-order = spinboard.drawLines(500)
-# cv2.imwrite("Output.png", spinboard.image)
+# zombieEyes = Spinboard("images/zombie.png", numNails=100, weightedImage="images/zombieEyesWeight.png", threadColor=(210, 118, 25, 30), replacedColor=(0, 200, 255))
+# order = zombieEyes.drawLines(300)
+# cv2.imwrite("ZombieEyes.png", zombieEyes.image)
+zombieFace = Spinboard("images/Butterfly_small.png", numNails=100, weightedImage="images/Butterfly_small_weights.png", threadColor=(0, 0, 0, 30), replacedColor=(0, 0, 0))
+order = zombieFace.drawLines(700)
+# cv2.imwrite("ZombieFace.png", zombieFace.image)
+# cv2.imwrite("ZombieArt_Spinboard.png", cv2.addWeighted(cv2.imread("ZombieEyes.png"), .2, cv2.imread("ZombieFace.png"), .8, 0))
